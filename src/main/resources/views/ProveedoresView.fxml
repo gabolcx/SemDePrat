@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="controllers.ProveedoresController">
+    <top>
+        <VBox spacing="10" alignment="CENTER">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10" />
+            </padding>
+            <children>
+                <Label text="Gestión de Proveedores" styleClass="subtitle-label" />
+
+                <HBox spacing="10" alignment="CENTER">
+                    <children>
+                        <Label text="CUIT Proveedor:" />
+                        <TextField fx:id="cuitProveedorField" />
+
+                        <Label text="Nombre Proveedor:" />
+                        <TextField fx:id="nombreProveedorField" />
+
+                        <Label text="Categoría:" />
+                        <TextField fx:id="categoriaField" />
+
+                        <Button text="Buscar" onAction="#handleBuscar" styleClass="button" />
+                    </children>
+                </HBox>
+            </children>
+        </VBox>
+    </top>
+
+    <center>
+        <TableView fx:id="tablaProveedores">
+            <columns>
+                <TableColumn text="CUIT" fx:id="colCuitProveedor" />
+                <TableColumn text="Nombre" fx:id="colNombreProveedor" />
+                <TableColumn text="Categoría" fx:id="colCategoria" />
+                <TableColumn text="Dirección" fx:id="colDireccion" />
+                <TableColumn text="Teléfono" fx:id="colTelefono" />
+                <TableColumn text="Email" fx:id="colEmail" />
+            </columns>
+        </TableView>
+    </center>
+
+    <bottom>
+        <HBox spacing="10" alignment="CENTER">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10" />
+            </padding>
+            <children>
+                <Button text="ELIMINAR PROVEEDOR" onAction="#handleEliminarProveedor" styleClass="eliminar-button" />
+                <Button text="MODIFICAR PROVEEDOR" onAction="#handleModificarProveedor" styleClass="modificar-button" />
+                <Button text="GUARDAR" onAction="#handleGuardar" fx:id="btnGuardar" visible="false" styleClass="guardar-button" />
+            </children>
+        </HBox>
+    </bottom>
+</BorderPane>
