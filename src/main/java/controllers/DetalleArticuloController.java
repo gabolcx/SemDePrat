@@ -1,111 +1,102 @@
 package controllers;
 
+import utils.DatabaseConnection;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextField;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.cell.PropertyValueFactory;
 import models.Articulo;
 
-public class DetalleArticuloController extends BaseController {
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+public class DetalleArticuloController {
 
     @FXML
-    private TextField codigoArticuloField;
-    @FXML
-    private TextField nombreArticuloField;
-    @FXML
-    private TextField areaUsuariaField;
-    @FXML
-    private TextField stockActualField;
-    @FXML
-    private TextField unidadMedidaField;
-    @FXML
-    private Button btnGuardar;
+    private TableView<Articulo> articuloTable;
 
-    private Articulo articulo;
+    @FXML
+    private TableColumn<Articulo, String> codigoColumn;
 
-    public void setArticulo(Articulo articulo) {
-        this.articulo = articulo;
-        mostrarDatosArticulo();
+    @FXML
+    private TableColumn<Articulo, String> nombreColumn;
+
+    @FXML
+    private TableColumn<Articulo, String> areaColumn;
+
+    @FXML
+    private TableColumn<Articulo, Integer> stockColumn;
+
+    @FXML
+    private TableColumn<Articulo, String> umColumn;
+
+    private ObservableList<Articulo> articuloList = FXCollections.observableArrayList();
+
+    @FXML
+    public void initialize() {
+        codigoColumn.setCellValueFactory(new PropertyValueFactory<>("codigoArticulo"));
+        nombreColumn.setCellValueFactory(new PropertyValueFactory<>("nombreArticulo"));
+        areaColumn.setCellValueFactory(new PropertyValueFactory<>("areaUsuaria"));
+        stockColumn.setCellValueFactory(new PropertyValueFactory<>("stockActual"));
+        umColumn.setCellValueFactory(new PropertyValueFactory<>("unidadMedida"));
+
+        articuloTable.setItems(articuloList);
+
+        cargarArticulos();
     }
 
-    private void mostrarDatosArticulo() {
-        if (articulo != null) {
-            codigoArticuloField.setText(articulo.getCodigoArticulo());
-            nombreArticuloField.setText(articulo.getNombreArticulo());
-            areaUsuariaField.setText(articulo.getAreaUsuaria());
-            stockActualField.setText(String.valueOf(articulo.getStockActual()));
-            unidadMedidaField.setText(articulo.getUnidadMedida());
+    private void cargarArticulos() {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "SELECT * FROM articulos";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                Articulo articulo = new Articulo(
+                        rs.getString("codigo_articulo"),
+                        rs.getString("nombre_articulo"),
+                        rs.getString("area_usuaria"),
+                        rs.getInt("stock_actual"),
+                        rs.getString("UM")
+                );
+                articuloList.add(articulo);
+            }
+        } catch (SQLException e) {
+            mostrarMensaje("Error", "No se pudieron cargar los artículos: " + e.getMessage());
         }
+    }
+
+    private void mostrarMensaje(String titulo, String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(titulo);
+        alert.setHeaderText(null);
+        alert.setContentText(mensaje);
+        alert.showAndWait();
     }
 
     @FXML
     private void handleEliminarArticulo() {
-        // Confirmación antes de eliminar
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Eliminar Artículo");
-        alert.setHeaderText(null);
-        alert.setContentText("¿Estás seguro de que querés eliminar este artículo?");
-        alert.showAndWait().ifPresent(response -> {
-            if (response.getText().equals("Aceptar")) {
-
-                System.out.println("Artículo eliminado.");
-
-            }
-        });
-    }
-
-    @FXML
-    private void handleModificarArticulo() {
-
-        nombreArticuloField.setEditable(true);
-        areaUsuariaField.setEditable(true);
-        stockActualField.setEditable(true);
-        unidadMedidaField.setEditable(true);
-
-        btnGuardar.setVisible(true);
-    }
-
-    @FXML
-    private void handleGuardar() {
-
-        String nuevoNombre = nombreArticuloField.getText();
-        String nuevaArea = areaUsuariaField.getText();
-        int nuevoStock;
-        try {
-            nuevoStock = Integer.parseInt(stockActualField.getText());
-        } catch (NumberFormatException e) {
-            // Mostrar error si el stock no es un número válido
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Error");
-            alert.setHeaderText(null);
-            alert.setContentText("El campo 'Stock Actual' debe ser un número entero.");
-            alert.showAndWait();
+        Articulo selectedArticulo = articuloTable.getSelectionModel().getSelectedItem();
+        if (selectedArticulo == null) {
+            mostrarMensaje("Error", "Seleccioná un artículo para eliminar.");
             return;
         }
-        String nuevaUnidad = unidadMedidaField.getText();
 
-        // Actualizar el objeto Articulo
-        articulo.setNombreArticulo(nuevoNombre);
-        articulo.setAreaUsuaria(nuevaArea);
-        articulo.setStockActual(nuevoStock);
-        articulo.setUnidadMedida(nuevaUnidad);
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "DELETE FROM articulos WHERE codigo_articulo = ?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, selectedArticulo.getCodigoArticulo());
+            stmt.executeUpdate();
 
-        // Lógica para guardar los cambios
-
-
-        nombreArticuloField.setEditable(false);
-        areaUsuariaField.setEditable(false);
-        stockActualField.setEditable(false);
-        unidadMedidaField.setEditable(false);
-
-
-        btnGuardar.setVisible(false);
-
-
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Artículo Modificado");
-        alert.setHeaderText(null);
-        alert.setContentText("Los datos del artículo se han actualizado correctamente.");
-        alert.showAndWait();
+            articuloList.remove(selectedArticulo);
+            mostrarMensaje("Éxito", "El artículo fue eliminado correctamente.");
+        } catch (SQLException e) {
+            mostrarMensaje("Error", "No se pudo eliminar el artículo: " + e.getMessage());
+        }
     }
 }

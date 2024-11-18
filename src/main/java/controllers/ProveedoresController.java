@@ -3,140 +3,99 @@ package controllers;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
-import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.control.Alert;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import models.Proveedor;
+import utils.DatabaseConnection;
 
-public class ProveedoresController extends BaseController {
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+public class ProveedoresController {
 
     @FXML
-    private TextField cuitProveedorField;
+    private TextField cuitField;
 
     @FXML
-    private TextField nombreProveedorField;
+    private TextField nombreField;
 
     @FXML
     private TextField categoriaField;
 
     @FXML
-    private TableView<Proveedor> tablaProveedores;
+    private TableView<Proveedor> proveedoresTable;
 
     @FXML
-    private TableColumn<Proveedor, String> colCuitProveedor;
+    private TableColumn<Proveedor, String> cuitColumn;
 
     @FXML
-    private TableColumn<Proveedor, String> colNombreProveedor;
+    private TableColumn<Proveedor, String> nombreColumn;
 
     @FXML
-    private TableColumn<Proveedor, String> colCategoria;
+    private TableColumn<Proveedor, String> categoriaColumn;
 
     @FXML
-    private TableColumn<Proveedor, String> colDireccion;
+    private TableColumn<Proveedor, String> direccionColumn;
 
     @FXML
-    private TableColumn<Proveedor, String> colTelefono;
+    private TableColumn<Proveedor, String> telefonoColumn;
 
     @FXML
-    private TableColumn<Proveedor, String> colEmail;
+    private TableColumn<Proveedor, String> emailColumn;
 
-    private ObservableList<Proveedor> listaProveedores = FXCollections.observableArrayList();
-
-    @FXML
-    private Button btnGuardar;
+    private ObservableList<Proveedor> proveedorList = FXCollections.observableArrayList();
 
     @FXML
-    private void initialize() {
-        colCuitProveedor.setCellValueFactory(cellData -> cellData.getValue().cuitProveedorProperty());
-        colNombreProveedor.setCellValueFactory(cellData -> cellData.getValue().nombreProveedorProperty());
-        colCategoria.setCellValueFactory(cellData -> cellData.getValue().categoriaProperty());
-        colDireccion.setCellValueFactory(cellData -> cellData.getValue().direccionProperty());
-        colTelefono.setCellValueFactory(cellData -> cellData.getValue().telefonoProperty());
-        colEmail.setCellValueFactory(cellData -> cellData.getValue().emailProperty());
-
-        tablaProveedores.setItems(listaProveedores);
-
-        // Deshabilitar edición por defecto
-        deshabilitarEdicion();
+    public void initialize() {
+        cuitColumn.setCellValueFactory(cellData -> cellData.getValue().cuitProveedorProperty());
+        nombreColumn.setCellValueFactory(cellData -> cellData.getValue().nombreProveedorProperty());
+        categoriaColumn.setCellValueFactory(cellData -> cellData.getValue().categoriaProperty());
+        direccionColumn.setCellValueFactory(cellData -> cellData.getValue().direccionProperty());
+        telefonoColumn.setCellValueFactory(cellData -> cellData.getValue().telefonoProperty());
+        emailColumn.setCellValueFactory(cellData -> cellData.getValue().emailProperty());
+        proveedoresTable.setItems(proveedorList);
     }
 
     @FXML
     private void handleBuscar() {
-        listaProveedores.clear();
-
-        String cuit = cuitProveedorField.getText();
-        String nombre = nombreProveedorField.getText();
+        String cuit = cuitField.getText();
+        String nombre = nombreField.getText();
         String categoria = categoriaField.getText();
 
-        listaProveedores.addAll(buscarProveedores(cuit, nombre, categoria));
-    }
+        proveedorList.clear();
 
-    private ObservableList<Proveedor> buscarProveedores(String cuit, String nombre, String categoria) {
-        ObservableList<Proveedor> proveedores = FXCollections.observableArrayList();
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "SELECT * FROM proveedores WHERE " +
+                    "(cuit_proveedor LIKE ? OR ? = '') AND " +
+                    "(nombre_proveedor LIKE ? OR ? = '') AND " +
+                    "(categoria LIKE ? OR ? = '')";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, "%" + cuit + "%");
+            stmt.setString(2, cuit);
+            stmt.setString(3, "%" + nombre + "%");
+            stmt.setString(4, nombre);
+            stmt.setString(5, "%" + categoria + "%");
+            stmt.setString(6, categoria);
 
-        // Datos simulados
-        if (cuit.equals("20304050") || nombre.equalsIgnoreCase("Proveedor X") || categoria.equalsIgnoreCase("Electrónica")) {
-            proveedores.add(new Proveedor("20304050", "Proveedor X", "Electrónica", "Calle Falsa 123", "123456789", "contacto@proveedorx.com"));
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Proveedor proveedor = new Proveedor(
+                        rs.getString("cuit_proveedor"),
+                        rs.getString("nombre_proveedor"),
+                        rs.getString("categoria"),
+                        rs.getString("direccion"),
+                        rs.getString("telefono"),
+                        rs.getString("mail")
+                );
+                proveedorList.add(proveedor);
+            }
+        } catch (SQLException e) {
+            mostrarMensaje("Error", "No se pudieron obtener los datos de los proveedores: " + e.getMessage());
         }
-
-        return proveedores;
-    }
-
-    @FXML
-    private void handleEliminarProveedor() {
-        Proveedor seleccionado = tablaProveedores.getSelectionModel().getSelectedItem();
-        if (seleccionado != null) {
-            Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
-            confirmacion.setTitle("Eliminar Proveedor");
-            confirmacion.setHeaderText(null);
-            confirmacion.setContentText("¿Estás seguro de que deseas eliminar al proveedor seleccionado?");
-            confirmacion.showAndWait().ifPresent(response -> {
-                if (response == ButtonType.OK) {
-
-                    listaProveedores.remove(seleccionado);
-
-                    mostrarMensaje("Proveedor eliminado", "El proveedor ha sido eliminado correctamente.");
-                }
-            });
-        } else {
-            mostrarMensaje("Seleccione un proveedor", "Por favor, seleccione un proveedor de la tabla.");
-        }
-    }
-
-    @FXML
-    private void handleModificarProveedor() {
-        Proveedor seleccionado = tablaProveedores.getSelectionModel().getSelectedItem();
-        if (seleccionado != null) {
-            habilitarEdicion();
-            btnGuardar.setVisible(true);
-        } else {
-            mostrarMensaje("Seleccione un proveedor", "Por favor, seleccione un proveedor de la tabla.");
-        }
-    }
-
-    @FXML
-    private void handleGuardar() {
-        Proveedor seleccionado = tablaProveedores.getSelectionModel().getSelectedItem();
-        if (seleccionado != null) {
-
-            deshabilitarEdicion();
-            btnGuardar.setVisible(false);
-            mostrarMensaje("Proveedor modificado", "Los datos del proveedor han sido actualizados correctamente.");
-        } else {
-            mostrarMensaje("Seleccione un proveedor", "Por favor, seleccione un proveedor de la tabla.");
-        }
-    }
-
-    private void habilitarEdicion() {
-        tablaProveedores.setEditable(true);
-        colNombreProveedor.setCellFactory(TextFieldTableCell.forTableColumn());
-        colCategoria.setCellFactory(TextFieldTableCell.forTableColumn());
-        colDireccion.setCellFactory(TextFieldTableCell.forTableColumn());
-        colTelefono.setCellFactory(TextFieldTableCell.forTableColumn());
-        colEmail.setCellFactory(TextFieldTableCell.forTableColumn());
-    }
-
-    private void deshabilitarEdicion() {
-        tablaProveedores.setEditable(false);
     }
 
     private void mostrarMensaje(String titulo, String mensaje) {
@@ -145,5 +104,25 @@ public class ProveedoresController extends BaseController {
         alert.setHeaderText(null);
         alert.setContentText(mensaje);
         alert.showAndWait();
+    }
+
+    @FXML
+    private void handleEliminar() {
+        Proveedor selectedProveedor = proveedoresTable.getSelectionModel().getSelectedItem();
+        if (selectedProveedor == null) {
+            mostrarMensaje("Advertencia", "Seleccione un proveedor para eliminar.");
+            return;
+        }
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "DELETE FROM proveedores WHERE cuit_proveedor = ?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, selectedProveedor.getCuitProveedor());
+            stmt.executeUpdate();
+            proveedorList.remove(selectedProveedor);
+            mostrarMensaje("Éxito", "Proveedor eliminado correctamente.");
+        } catch (SQLException e) {
+            mostrarMensaje("Error", "No se pudo eliminar el proveedor: " + e.getMessage());
+        }
     }
 }

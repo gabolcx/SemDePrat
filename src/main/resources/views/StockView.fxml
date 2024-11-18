@@ -3,14 +3,31 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="controllers.StockController">
+<AnchorPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.StockController">
     <children>
-        <VBox spacing="10" alignment="CENTER" prefWidth="400" prefHeight="200">
-            <Label text="Gestión de Stock" styleClass="subtitle-label" />
+        <VBox spacing="10" AnchorPane.topAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.bottomAnchor="10.0">
+            <HBox spacing="10">
+                <Label text="Código Artículo:"/>
+                <TextField fx:id="codigoArticuloField" promptText="Ingrese código"/>
+            </HBox>
+            <HBox spacing="10">
+                <Label text="Nombre Artículo:"/>
+                <TextField fx:id="nombreArticuloField" promptText="Ingrese nombre"/>
+            </HBox>
+            <HBox spacing="10">
+                <Label text="Área Usuaria:"/>
+                <TextField fx:id="areaUsuariaField" promptText="Ingrese área usuaria"/>
+            </HBox>
+            <Button text="Buscar" onAction="#handleBuscar"/>
 
-            <Button text="STOCK ACTUAL" onAction="#handleStockActual" styleClass="button" />
-            <Button text="MOVIMIENTOS DE STOCK" onAction="#handleMovimientosStock" styleClass="button" />
-
+            <TableView fx:id="tableView" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colCodigoArticulo" text="Código Artículo" prefWidth="150"/>
+                    <TableColumn fx:id="colNombreArticulo" text="Nombre Artículo" prefWidth="200"/>
+                    <TableColumn fx:id="colAreaUsuaria" text="Área Usuaria" prefWidth="150"/>
+                    <TableColumn fx:id="colStockActual" text="Stock Actual" prefWidth="100"/>
+                </columns>
+            </TableView>
         </VBox>
     </children>
 </AnchorPane>

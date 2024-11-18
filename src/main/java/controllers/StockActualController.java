@@ -1,93 +1,97 @@
 package controllers;
 
+import models.Stock;
+import utils.DatabaseConnection;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
-import models.Articulo;
+import javafx.scene.control.Alert;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 
-public class StockActualController extends BaseController {
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
-    @FXML
-    private TextField codigoArticuloField;
-
-    @FXML
-    private TextField nombreArticuloField;
-
-    @FXML
-    private TextField areaUsuariaField;
+public class StockActualController {
 
     @FXML
-    private TableView<Articulo> tablaStockActual;
+    private TextField codigoField;
 
     @FXML
-    private TableColumn<Articulo, String> colCodigoArticulo;
+    private TextField nombreField;
 
     @FXML
-    private TableColumn<Articulo, String> colNombreArticulo;
+    private TextField areaField;
 
     @FXML
-    private TableColumn<Articulo, String> colAreaUsuaria;
+    private TableView<Stock> stockTable;
 
     @FXML
-    private TableColumn<Articulo, Integer> colStockActual;
+    private TableColumn<Stock, String> codigoColumn;
 
     @FXML
-    private TableColumn<Articulo, String> colUnidadMedida;
-
-    private ObservableList<Articulo> listaArticulos = FXCollections.observableArrayList();
+    private TableColumn<Stock, String> nombreColumn;
 
     @FXML
-    private void initialize() {
-        colCodigoArticulo.setCellValueFactory(cellData -> cellData.getValue().codigoArticuloProperty());
-        colNombreArticulo.setCellValueFactory(cellData -> cellData.getValue().nombreArticuloProperty());
-        colAreaUsuaria.setCellValueFactory(cellData -> cellData.getValue().areaUsuariaProperty());
-        colStockActual.setCellValueFactory(cellData -> cellData.getValue().stockActualProperty().asObject());
-        colUnidadMedida.setCellValueFactory(cellData -> cellData.getValue().unidadMedidaProperty());
+    private TableColumn<Stock, String> areaColumn;
 
-        tablaStockActual.setItems(listaArticulos);
+    @FXML
+    private TableColumn<Stock, Integer> cantidadColumn;
+
+    private ObservableList<Stock> stockList = FXCollections.observableArrayList();
+
+    @FXML
+    public void initialize() {
+        codigoColumn.setCellValueFactory(cellData -> cellData.getValue().codigoArticuloProperty());
+        nombreColumn.setCellValueFactory(cellData -> cellData.getValue().nombreArticuloProperty());
+        areaColumn.setCellValueFactory(cellData -> cellData.getValue().areaUsuariaProperty());
+        cantidadColumn.setCellValueFactory(cellData -> cellData.getValue().cantidadProperty().asObject());
+        stockTable.setItems(stockList);
     }
 
     @FXML
-    private void handleBuscar() {
+    private void handleSearch() {
+        String codigo = codigoField.getText();
+        String nombre = nombreField.getText();
+        String area = areaField.getText();
+        stockList.clear();
 
-        listaArticulos.clear();
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "SELECT codigo_articulo, nombre_articulo, area_usuaria, stock_fecha AS cantidad " +
+                    "FROM inventario WHERE (codigo_articulo LIKE ? OR ? = '') " +
+                    "AND (nombre_articulo LIKE ? OR ? = '') AND (area_usuaria LIKE ? OR ? = '')";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, "%" + codigo + "%");
+            stmt.setString(2, codigo);
+            stmt.setString(3, "%" + nombre + "%");
+            stmt.setString(4, nombre);
+            stmt.setString(5, "%" + area + "%");
+            stmt.setString(6, area);
 
-
-        String codigo = codigoArticuloField.getText();
-        String nombre = nombreArticuloField.getText();
-        String area = areaUsuariaField.getText();
-
-        // Simular búsqueda en la base de datos o lista
-        // Acá se implementaria la lógica real para obtener los datos
-
-        // Ejemplo de datos simulados
-        if (codigo.isEmpty() && nombre.isEmpty() && area.isEmpty()) {
-            // Si no se ingresó ningún filtro, mostrar todos
-            listaArticulos.addAll(obtenerTodosLosArticulos());
-        } else {
-            // Filtrar según los campos ingresados
-            listaArticulos.addAll(buscarArticulos(codigo, nombre, area));
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Stock stock = new Stock(
+                        rs.getString("codigo_articulo"),
+                        rs.getString("nombre_articulo"),
+                        rs.getString("area_usuaria"),
+                        rs.getInt("cantidad"),
+                        rs.getInt("cantidad") // Duplicado para simular el campo "stock_actual"
+                );
+                stockList.add(stock);
+            }
+        } catch (SQLException e) {
+            mostrarMensaje("Error", "No se pudieron obtener los datos de stock actual: " + e.getMessage());
         }
     }
 
-    private ObservableList<Articulo> obtenerTodosLosArticulos() {
-
-        ObservableList<Articulo> articulos = FXCollections.observableArrayList();
-        articulos.add(new Articulo("ART001", "Televisor", "Electrónica", 10, "Unidad"));
-        articulos.add(new Articulo("ART002", "Laptop", "Informática", 5, "Unidad"));
-        return articulos;
-    }
-
-    private ObservableList<Articulo> buscarArticulos(String codigo, String nombre, String area) {
-
-        ObservableList<Articulo> articulos = FXCollections.observableArrayList();
-
-
-        if (codigo.equals("ART001") || nombre.equalsIgnoreCase("Televisor") || area.equalsIgnoreCase("Electrónica")) {
-            articulos.add(new Articulo("ART001", "Televisor", "Electrónica", 10, "Unidad"));
-        }
-
-        return articulos;
+    private void mostrarMensaje(String titulo, String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(titulo);
+        alert.setHeaderText(null);
+        alert.setContentText(mensaje);
+        alert.showAndWait();
     }
 }

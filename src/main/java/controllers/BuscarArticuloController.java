@@ -1,12 +1,15 @@
 package controllers;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.scene.control.TextField;
-import javafx.stage.Stage;
+import javafx.scene.control.*;
 import models.Articulo;
+import utils.DatabaseConnection;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 public class BuscarArticuloController extends BaseController {
 
@@ -17,49 +20,84 @@ public class BuscarArticuloController extends BaseController {
     private TextField nombreArticuloField;
 
     @FXML
+    private TableView<Articulo> articuloTable;
+
+    @FXML
+    private TableColumn<Articulo, String> colCodigoArticulo;
+
+    @FXML
+    private TableColumn<Articulo, String> colNombreArticulo;
+
+    @FXML
+    private TableColumn<Articulo, String> colAreaUsuaria;
+
+    @FXML
+    private TableColumn<Articulo, Integer> colStockActual;
+
+    @FXML
+    private TableColumn<Articulo, String> colUnidadMedida;
+
+    private ObservableList<Articulo> listaArticulos = FXCollections.observableArrayList();
+
+    @FXML
+    private void initialize() {
+        colCodigoArticulo.setCellValueFactory(cellData -> cellData.getValue().codigoArticuloProperty());
+        colNombreArticulo.setCellValueFactory(cellData -> cellData.getValue().nombreArticuloProperty());
+        colAreaUsuaria.setCellValueFactory(cellData -> cellData.getValue().areaUsuariaProperty());
+        colStockActual.setCellValueFactory(cellData -> cellData.getValue().stockActualProperty().asObject());
+        colUnidadMedida.setCellValueFactory(cellData -> cellData.getValue().unidadMedidaProperty());
+
+        articuloTable.setItems(listaArticulos);
+    }
+
+    @FXML
     private void handleBuscar() {
         String codigo = codigoArticuloField.getText();
         String nombre = nombreArticuloField.getText();
 
-        // Simulamos la búsqueda del artículo (en realidad deberías buscar en tu lista o base de datos)
-        Articulo articuloEncontrado = buscarArticulo(codigo, nombre);
-
-        if (articuloEncontrado != null) {
-            mostrarDetalleArticulo(articuloEncontrado);
-        } else {
-            // Podés mostrar una alerta indicando que no se encontró el artículo
-            System.out.println("Artículo no encontrado.");
-        }
+        listaArticulos.clear();
+        listaArticulos.addAll(buscarArticulos(codigo, nombre));
     }
 
-    private Articulo buscarArticulo(String codigo, String nombre) {
-        // Acá deberías implementar la lógica para buscar el artículo
-        // Por ahora, retornamos un objeto de ejemplo si el código o nombre no están vacíos
-        if (!codigo.isEmpty() || !nombre.isEmpty()) {
-            return new Articulo("ART001", "Televisor", "Electrónica", 10, "Unidad");
-        }
-        return null;
-    }
+    private ObservableList<Articulo> buscarArticulos(String codigo, String nombre) {
+        ObservableList<Articulo> articulos = FXCollections.observableArrayList();
 
-    private void mostrarDetalleArticulo(Articulo articulo) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/DetalleArticuloView.fxml"));
-            Parent root = loader.load();
+        String query = "SELECT * FROM articulos WHERE " +
+                "(codigo_articulo LIKE ? OR ? IS NULL) AND " +
+                "(nombre_articulo LIKE ? OR ? IS NULL)";
 
-            // Pasar el artículo al controlador de detalle
-            DetalleArticuloController controller = loader.getController();
-            controller.setArticulo(articulo);
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
 
-            // Crear la escena y agregar el CSS
-            Scene scene = new Scene(root);
-            scene.getStylesheets().add(getClass().getResource("/styles/styles.css").toExternalForm());
+            stmt.setString(1, "%" + codigo + "%");
+            stmt.setString(2, codigo.isEmpty() ? null : codigo);
+            stmt.setString(3, "%" + nombre + "%");
+            stmt.setString(4, nombre.isEmpty() ? null : nombre);
 
-            Stage stage = new Stage();
-            stage.setTitle("Detalle del Artículo");
-            stage.setScene(scene);
-            stage.show();
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                articulos.add(new Articulo(
+                        rs.getString("codigo_articulo"),
+                        rs.getString("nombre_articulo"),
+                        rs.getString("area_usuaria"),
+                        rs.getInt("stock_actual"),
+                        rs.getString("UM")
+                ));
+            }
         } catch (Exception e) {
             e.printStackTrace();
+            mostrarError("Error al buscar artículos", "Ocurrió un error al buscar artículos en la base de datos.");
         }
+
+        return articulos;
+    }
+
+    private void mostrarError(String titulo, String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(titulo);
+        alert.setHeaderText(null);
+        alert.setContentText(mensaje);
+        alert.showAndWait();
     }
 }

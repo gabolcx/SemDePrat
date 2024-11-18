@@ -11,10 +11,8 @@
          <Button text="ARTICULOS" onAction="#handleArticulos" />
          <Button text="STOCK" onAction="#handleStock" />
          <Button text="PROVEEDORES" onAction="#handleProveedores" />
-
-         <!-- SE IMPLEMENTARAN MAS ADELANTE -->
-         <!-- <Button text="FACTURACION" onAction="#handleFacturacion" styleClass="button" /> -->
-         <!-- <Button text="ORDENES DE COMPRA" onAction="#handleFacturacion" styleClass="button" /> -->
+         <Button text="FACTURACION" onAction="#handleFacturacion" styleClass="button" />
+         <Button text="ORDENES DE COMPRA" onAction="#handleFacturacion" styleClass="button" />
 
       </VBox>
    </children>

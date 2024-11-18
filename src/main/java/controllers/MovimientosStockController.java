@@ -5,6 +5,12 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import models.Inventario;
+import utils.DatabaseConnection;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class MovimientosStockController extends BaseController {
 
@@ -68,19 +74,49 @@ public class MovimientosStockController extends BaseController {
         String codigo = codigoArticuloField.getText();
         String nombre = nombreArticuloField.getText();
 
-        // Simular búsqueda en la base de datos o lista
         listaMovimientos.addAll(buscarMovimientos(codigo, nombre));
     }
 
     private ObservableList<Inventario> buscarMovimientos(String codigo, String nombre) {
         ObservableList<Inventario> movimientos = FXCollections.observableArrayList();
 
-        // Ejemplo de datos simulados
-        if (codigo.equals("ART001") || nombre.equalsIgnoreCase("Televisor")) {
-            movimientos.add(new Inventario("2023-10-15", "ART001", "Televisor", "Electrónica", 5, "Unidad", "INGRESO", 10, "Compra de stock"));
-            movimientos.add(new Inventario("2023-10-16", "ART001", "Televisor", "Electrónica", -2, "Unidad", "EGRESO", 8, "Venta realizada"));
+        String query = "SELECT fecha, codigo_articulo, nombre_articulo, area_usuaria, cantidad, UM, movimiento, stock_fecha, observaciones " +
+                "FROM inventario WHERE (codigo_articulo = ? OR nombre_articulo LIKE ?)";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, codigo.isEmpty() ? null : codigo);
+            stmt.setString(2, nombre.isEmpty() ? null : "%" + nombre + "%");
+
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                movimientos.add(new Inventario(
+                        rs.getString("fecha"),
+                        rs.getString("codigo_articulo"),
+                        rs.getString("nombre_articulo"),
+                        rs.getString("area_usuaria"),
+                        rs.getInt("cantidad"),
+                        rs.getString("UM"),
+                        rs.getString("movimiento"),
+                        rs.getInt("stock_fecha"),
+                        rs.getString("observaciones")
+                ));
+            }
+
+        } catch (SQLException e) {
+            mostrarAlerta("Error", "Error al buscar movimientos en la base de datos: " + e.getMessage());
         }
 
         return movimientos;
+    }
+
+    private void mostrarAlerta(String titulo, String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(titulo);
+        alert.setHeaderText(null);
+        alert.setContentText(mensaje);
+        alert.showAndWait();
     }
 }

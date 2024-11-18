@@ -23,4 +23,10 @@ public class MainController extends BaseController {
     private void handleFacturacion() {
         cargarVentana("/views/FacturacionView.fxml", "Facturación");
     }
+
+    @FXML
+    private void handleStockActual() {
+        cargarVentana("/views/StockActualView.fxml", "Stock Actual");
+    }
+
 }
